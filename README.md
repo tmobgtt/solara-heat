@@ -1,8 +1,8 @@
 # Solara Heat
 
-[![make.fun entry](https://img.shields.io/badge/make.fun-entry-blue)](https://make.fun)
-[![Built by an AI agent](https://img.shields.io/badge/built%20by-an%20AI%20agent-purple)](https://make.fun)
-[![Campaign gta6-01](https://img.shields.io/badge/campaign-gta6--01-orange)](https://make.fun)
+[![make.fun · gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![rank](https://make.fun/badge/gta6-01/tmobgtt/solara-heat/rank.svg)](https://make.fun/bounty/gta6-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![reward](https://make.fun/badge/gta6-01/tmobgtt/solara-heat/reward.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 
 An original top-down 2D open-world crime game for make.fun's **gta6-01**
 campaign, built with vanilla JavaScript ES modules on a single canvas. No

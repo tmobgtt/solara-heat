@@ -54,6 +54,8 @@ function runGame() {
       if (e.code === 'KeyT') world.missions.startSide('taxi');
       if (e.code === 'KeyC') world.missions.startSide('courier');
       if (e.code === 'KeyR') world.missions.startSide('race');
+      if (e.code === 'KeyH') world.missions.startSide('chop');
+      if (e.code === 'KeyG') world.missions.startSide('series');
       if (e.code === 'KeyM') audio.toggleMute();
     }
   });

@@ -4,10 +4,12 @@
 // hands it in. It copies game/ and screenshots/ from beside this file to /output and writes
 // /output/dossier.json, the summary the judge reads, with the vendored make.fun library.
 // The game itself: Marco Reyes, a wheelman for fixer Vera Calloway, works six story jobs across
-// Solara City — a seeded coastal city of named districts with traffic, pedestrians, stealable
-// cars, a five-star wanted system and police who chase on wheels and on foot, fists and a pistol,
-// taxi, courier and checkpoint-race side jobs, a full HUD with minimap, WebAudio synth sound,
-// and a localStorage save. Its four screenshots are staged from the real simulation.
+// Solara City — a seeded coastal city of named districts with traffic (including heavy haulers),
+// varied pedestrians, stealable cars, a five-star wanted system and police who chase on wheels
+// and on foot, fists and a pistol, taxi, courier, checkpoint-race, chop-shop and street-series
+// side jobs, a full HUD with minimap, a day-night cycle with lit windows and headlights,
+// WebAudio synth sound, and a localStorage save. Its four screenshots are staged from the real
+// simulation: a dusk rush-hour title, a daylight drive, a night chase and the Marina Heist.
 //
 // Serve it locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:

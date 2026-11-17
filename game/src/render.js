@@ -15,6 +15,7 @@ export const SCREEN_COMPLETE = 'complete';
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
   const view = { w: 1280, h: 720 };
+  let darkF = 0; // 0 at noon, 1 at full night: drives lit windows, lamp glow and headlights
   function resize() {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     view.w = canvas.width; view.h = canvas.height;
@@ -45,25 +46,74 @@ export function createRenderer(canvas) {
     ctx.fillStyle = 'rgba(20,20,20,0.4)';
     for (const s of world.skids) ctx.fillRect(s.x - 3, s.y - 3, 6, 6);
     // props, lamps, palms
-    for (const pr of city.props) { ctx.fillStyle = pr.kind === 'hydrant' ? '#c9403a' : pr.kind === 'bench' ? '#7a5c3e' : '#6b7c8c'; ctx.fillRect(pr.x - 5, pr.y - 5, 10, 10); }
-    for (const l of city.lamps) { ctx.fillStyle = '#3c4148'; ctx.fillRect(l.x - 2, l.y - 2, 4, 4); ctx.fillStyle = 'rgba(255,230,150,0.5)'; ctx.beginPath(); ctx.arc(l.x, l.y, 3, 0, Math.PI * 2); ctx.fill(); }
+    for (const pr of city.props) {
+      if (pr.x < camX - 30 || pr.x > camX + view.w + 30 || pr.y < camY - 30 || pr.y > camY + view.h + 30) continue;
+      if (pr.kind === 'umbrella') {
+        ctx.fillStyle = pr.color || '#c9403a'; ctx.beginPath(); ctx.arc(pr.x, pr.y, 11, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.beginPath(); ctx.arc(pr.x, pr.y, 4, 0, Math.PI * 2); ctx.fill();
+      } else if (pr.kind === 'dumpster') {
+        ctx.fillStyle = '#39543f'; ctx.fillRect(pr.x - 9, pr.y - 6, 18, 12);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(pr.x - 9, pr.y - 6, 18, 3);
+      } else if (pr.kind === 'planter') {
+        ctx.fillStyle = '#8a6a44'; ctx.fillRect(pr.x - 7, pr.y - 7, 14, 14);
+        ctx.fillStyle = '#4d8a3f'; ctx.fillRect(pr.x - 5, pr.y - 5, 10, 10);
+      } else { ctx.fillStyle = pr.kind === 'hydrant' ? '#c9403a' : pr.kind === 'bench' ? '#7a5c3e' : '#6b7c8c'; ctx.fillRect(pr.x - 5, pr.y - 5, 10, 10); }
+    }
+    for (const l of city.lamps) {
+      if (l.x < camX - 40 || l.x > camX + view.w + 40 || l.y < camY - 40 || l.y > camY + view.h + 40) continue;
+      ctx.fillStyle = '#3c4148'; ctx.fillRect(l.x - 2, l.y - 2, 4, 4);
+      if (darkF > 0.15) {
+        const g = ctx.createRadialGradient(l.x, l.y, 2, l.x, l.y, 27);
+        g.addColorStop(0, 'rgba(255,230,150,' + (0.4 * darkF).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,230,150,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(l.x, l.y, 27, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(255,230,150,0.5)'; ctx.beginPath(); ctx.arc(l.x, l.y, 3, 0, Math.PI * 2); ctx.fill();
+    }
     for (const palm of city.palms) {
       ctx.fillStyle = '#8a6a44'; ctx.fillRect(palm.x - 2, palm.y - 2, 4, 4);
       ctx.strokeStyle = '#4d8a3f'; ctx.lineWidth = 2.4;
       for (let k = 0; k < 5; k += 1) { const a = (k / 5) * Math.PI * 2 + palm.s; ctx.beginPath(); ctx.moveTo(palm.x, palm.y); ctx.lineTo(palm.x + Math.cos(a) * 13 * palm.s, palm.y + Math.sin(a) * 13 * palm.s); ctx.stroke(); }
     }
-    // buildings: walls, shaded roofs, windows lit by floor count and the seed
+    // buildings: walls, shaded roofs, then each kind's own dressing — shop awnings and signs,
+    // warehouse ribs and loading doors, house gables, tower sheen — and rooftop props
     for (const b of city.buildings) {
       if (b.x > camX + view.w + 60 || b.x + b.w < camX - 60 || b.y > camY + view.h + 60 || b.y + b.h < camY - 60) continue;
       ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(b.x + 5, b.y + 6, b.w, b.h);
       ctx.fillStyle = PALETTE.wall; ctx.fillRect(b.x, b.y, b.w, b.h);
       ctx.fillStyle = b.color; ctx.fillRect(b.x + 4, b.y + 4, b.w - 8, b.h - 8);
       ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(b.x + 4, b.y + 4, b.w - 8, 7);
-      ctx.fillStyle = 'rgba(30,40,60,0.75)';
-      const cols = Math.floor(b.w / 17), rowsN = Math.floor(b.h / 17);
-      for (let cx2 = 0; cx2 < cols; cx2 += 1) for (let cy2 = 0; cy2 < rowsN; cy2 += 1) {
-        if (((cx2 * 7 + cy2 * 13 + Math.floor(b.seed * 90)) % 5) < 2) { ctx.fillStyle = 'rgba(255,224,130,0.85)'; } else ctx.fillStyle = 'rgba(30,40,60,0.75)';
-        ctx.fillRect(b.x + 8 + cx2 * 17, b.y + 9 + cy2 * 17, 8, 9);
+      if (b.kind === 'house') {
+        ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(b.x + 4, b.y + b.h / 2 - 3, b.w - 8, 6);
+        ctx.fillStyle = b.trim; ctx.fillRect(b.x + 4, b.y + 4, b.w - 8, 4); ctx.fillRect(b.x + 4, b.y + b.h - 8, b.w - 8, 4);
+      }
+      if (b.kind === 'warehouse') {
+        ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 2;
+        for (let lx = b.x + 16; lx < b.x + b.w - 8; lx += 14) { ctx.beginPath(); ctx.moveTo(lx, b.y + 5); ctx.lineTo(lx, b.y + b.h - 5); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(190,220,240,0.5)'; ctx.fillRect(b.x + 10, b.y + 9, b.w - 20, 6);
+        ctx.fillStyle = 'rgba(20,24,30,0.55)'; ctx.fillRect(b.x + b.w / 2 - 13, b.y + b.h - 25, 26, 21);
+      } else {
+        // windows: the lit share climbs after dark, so the night city glows
+        const cols = Math.floor(b.w / 17), rowsN = Math.floor(b.h / 17);
+        const litMax = 2 + darkF * 2.2;
+        for (let cx2 = 0; cx2 < cols; cx2 += 1) for (let cy2 = 0; cy2 < rowsN; cy2 += 1) {
+          ctx.fillStyle = ((cx2 * 7 + cy2 * 13 + Math.floor(b.seed * 90)) % 5) < litMax ? 'rgba(255,224,130,0.9)' : 'rgba(30,40,60,0.75)';
+          ctx.fillRect(b.x + 8 + cx2 * 17, b.y + 9 + cy2 * 17, 8, 9);
+        }
+      }
+      if (b.kind === 'shop') {
+        ctx.fillStyle = b.trim; ctx.fillRect(b.x + 4, b.y + b.h - 15, b.w - 8, 9);
+        if (b.sign) { ctx.fillStyle = '#fff6da'; ctx.font = `bold 8px ${FONT}`; ctx.textAlign = 'left'; ctx.fillText(b.sign, b.x + 7, b.y + 13); }
+      }
+      if (b.kind === 'tower') { ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(b.x + 4, b.y + 4, 3, b.h - 8); }
+      if (b.roofProp === 'tank') {
+        ctx.fillStyle = '#7a5c3e'; ctx.fillRect(b.x + b.w - 25, b.y + 8, 13, 11);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(b.x + b.w - 25, b.y + 17, 13, 2);
+      } else if (b.roofProp === 'ac') {
+        ctx.fillStyle = 'rgba(210,214,220,0.8)'; ctx.fillRect(b.x + 10, b.y + b.h - 20, 12, 9);
+      } else if (b.roofProp === 'antenna') {
+        ctx.strokeStyle = 'rgba(30,30,36,0.8)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(b.x + 12, b.y + 16); ctx.lineTo(b.x + 12, b.y + 2); ctx.stroke();
+        if (darkF > 0.3) { ctx.fillStyle = '#ff5040'; ctx.fillRect(b.x + 11, b.y + 1, 2, 2); }
       }
     }
     // landmarks
@@ -85,10 +135,31 @@ export function createRenderer(canvas) {
     ctx.fillStyle = fg; ctx.font = `bold 19px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText(ch, x, y + 7);
   }
   function drawCar(car) {
+    if (darkF > 0.2 && !car.dead) {
+      // headlight cone spilling ahead of the car after dark, plus a siren wash for the law
+      ctx.save(); ctx.translate(car.x, car.y); ctx.rotate(car.angle);
+      const grad = ctx.createLinearGradient(car.w / 2, 0, car.w / 2 + 95, 0);
+      grad.addColorStop(0, 'rgba(255,240,180,' + (0.3 * darkF).toFixed(3) + ')'); grad.addColorStop(1, 'rgba(255,240,180,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.moveTo(car.w / 2, -car.h / 2 + 2); ctx.lineTo(car.w / 2 + 95, -car.h / 2 - 13); ctx.lineTo(car.w / 2 + 95, car.h / 2 + 13); ctx.lineTo(car.w / 2, car.h / 2 - 2); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      if (car.police) {
+        ctx.fillStyle = Math.floor(performance.now() / 300) % 2 ? 'rgba(255,64,64,' + (0.16 * darkF).toFixed(3) + ')' : 'rgba(64,122,255,' + (0.16 * darkF).toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(car.x, car.y, 34, 0, Math.PI * 2); ctx.fill();
+      }
+    }
     ctx.save(); ctx.translate(car.x, car.y); ctx.rotate(car.angle);
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(-car.w / 2 + 3, -car.h / 2 + 4, car.w, car.h);
     ctx.fillStyle = car.dead ? '#2c2c2c' : car.color; ctx.fillRect(-car.w / 2, -car.h / 2, car.w, car.h);
-    ctx.fillStyle = 'rgba(20,28,40,0.9)'; ctx.fillRect(-4, -car.h / 2 + 3, 13, car.h - 6);
+    if (car.type === 'hauler') {
+      // pale cargo box behind, cab glass at the nose: the heavy class reads at a glance
+      ctx.fillStyle = 'rgba(235,238,240,0.92)'; ctx.fillRect(-car.w / 2 + 2, -car.h / 2 + 2, car.w * 0.56, car.h - 4);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(-car.w / 2 + 2, -car.h / 2 + 2, car.w * 0.56, 3);
+      ctx.fillStyle = 'rgba(20,28,40,0.9)'; ctx.fillRect(car.w / 2 - 13, -car.h / 2 + 3, 8, car.h - 6);
+    } else {
+      ctx.fillStyle = 'rgba(20,28,40,0.9)'; ctx.fillRect(-4, -car.h / 2 + 3, 13, car.h - 6);
+      if (car.type === 'truck') { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(-car.w / 2 + 3, -car.h / 2 + 3, car.w * 0.45, car.h - 6); }
+    }
     ctx.fillStyle = '#ffd76a'; ctx.fillRect(car.w / 2 - 3, -car.h / 2 + 2, 3, 4); ctx.fillRect(car.w / 2 - 3, car.h / 2 - 6, 3, 4);
     if (car.type === 'taxi') { ctx.fillStyle = '#20242c'; ctx.fillRect(-8, -4, 12, 8); }
     if (car.police) {
@@ -106,8 +177,10 @@ export function createRenderer(canvas) {
     if (ped.dead) { ctx.fillStyle = ped.shirt; ctx.beginPath(); ctx.ellipse(0, 0, 13, 6, ped.angle, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
     ctx.rotate(ped.angle);
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.arc(2, 3, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = ped.hitFlash > 0 ? '#ff6a5e' : ped.shirt; ctx.beginPath(); ctx.arc(0, 0, 8.5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#e8b88a'; ctx.beginPath(); ctx.arc(3, 0, 4.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ped.pants || '#33404f'; ctx.beginPath(); ctx.arc(-3.5, 0, 7.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ped.hitFlash > 0 ? '#ff6a5e' : ped.shirt; ctx.beginPath(); ctx.arc(0.5, 0, 8.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ped.skin || '#e8b88a'; ctx.beginPath(); ctx.arc(3.5, 0, 4.6, 0, Math.PI * 2); ctx.fill();
+    if (ped.hat) { ctx.fillStyle = ped.pants || '#33404f'; ctx.fillRect(0.5, -4.6, 7, 3.2); }
     if (ped.cop) { ctx.fillStyle = '#ffd23c'; ctx.fillRect(-6, -7, 4, 4); }
     if (ped.enemy) { ctx.fillStyle = '#ff5040'; ctx.fillRect(4, -8, 4, 4); }
     ctx.restore();
@@ -124,8 +197,8 @@ export function createRenderer(canvas) {
     ctx.restore();
     if (world.combat.flash > 0) { ctx.fillStyle = 'rgba(255,210,80,0.9)'; ctx.beginPath(); ctx.arc(p.x + Math.cos(p.angle) * 30, p.y + Math.sin(p.angle) * 30, 7, 0, Math.PI * 2); ctx.fill(); }
   }
-  function panel(title, lines, prompt) {
-    ctx.fillStyle = 'rgba(6,8,12,0.72)'; ctx.fillRect(0, 0, view.w, view.h);
+  function panel(title, lines, prompt, veil) {
+    ctx.fillStyle = 'rgba(6,8,12,' + (veil === undefined ? 0.72 : veil) + ')'; ctx.fillRect(0, 0, view.w, view.h);
     ctx.fillStyle = 'rgba(14,17,24,0.95)'; const w = 660, h = 150 + lines.length * 30 + 70;
     ctx.fillRect((view.w - w) / 2, (view.h - h) / 2, w, h);
     ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 2; ctx.strokeRect((view.w - w) / 2, (view.h - h) / 2, w, h);
@@ -138,6 +211,9 @@ export function createRenderer(canvas) {
   }
   function draw(world, screen, hasSaveFile) {
     worldRef = world;
+    const hour = world.clockMinutes / 60;
+    const darkness = hour < 6 || hour > 19 ? 0.34 : hour < 8 || hour > 17 ? 0.14 : 0;
+    darkF = darkness / 0.34;
     world.district = districtAt(world.player.x, world.player.y);
     const camX = Math.max(0, Math.min(WORLD_W - view.w, world.player.x - view.w / 2));
     const camY = Math.max(0, Math.min(WORLD_H - view.h, world.player.y - view.h / 2));
@@ -153,8 +229,6 @@ export function createRenderer(canvas) {
     for (const e of world.effects) { ctx.fillStyle = 'rgba(90,90,90,0.4)'; ctx.beginPath(); ctx.arc(e.x, e.y, 7 + (0.9 - e.life) * 9, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
     // day-cycle tint
-    const hour = world.clockMinutes / 60;
-    const darkness = hour < 6 || hour > 19 ? 0.34 : hour < 8 || hour > 17 ? 0.14 : 0;
     if (darkness > 0) { ctx.fillStyle = `rgba(16,22,54,${darkness})`; ctx.fillRect(0, 0, view.w, view.h); }
     if (screen === SCREEN_PLAY || screen === SCREEN_PAUSED) drawHud(ctx, world, view.w, view.h);
     if (screen === SCREEN_TITLE) {
@@ -164,8 +238,8 @@ export function createRenderer(canvas) {
         '',
         'WASD / arrows — move and drive      E — enter / exit / steal a car',
         'Mouse — aim · Click or J — shoot / punch      Shift — sprint',
-        'Space — handbrake      Esc / P — pause      T / C / R — side jobs',
-      ], hasSaveFile ? 'Press Enter to continue · N for a new game' : 'Press Enter to start');
+        'Space — handbrake      Esc / P — pause      T / C / R / H / G — side jobs',
+      ], hasSaveFile ? 'Press Enter to continue · N for a new game' : 'Press Enter to start', 0.38);
     } else if (screen === SCREEN_PAUSED) panel('PAUSED', ['Solara City waits for no one. Well — just this once.'], 'Press Esc to resume');
     else if (screen === SCREEN_BUSTED) panel('BUSTED', ['The Solara PD got their man. Bail and fines paid from your cash.'], 'Press Enter to respawn at the hospital');
     else if (screen === SCREEN_WASTED) panel('WASTED', ['Marco wakes up at Solara General with a bill and a headache.'], 'Press Enter to respawn at the hospital');

@@ -1,6 +1,6 @@
 // Solara City generation: a road grid of named districts, solid buildings, the beach and sea on
 // the east edge, palms, lamps and props, plus the road-network and collision queries everyone uses.
-import { BEACH_X, BLOCK, COLS, PALETTE, PITCH, ROAD, ROWS, TILE, WORLD_H, WORLD_W } from './config.js';
+import { BEACH_X, BLOCK, COLS, PALETTE, PITCH, ROAD, ROWS, SHOP_SIGNS, TILE, WORLD_H, WORLD_W } from './config.js';
 
 export const ROAD_W = ROAD * TILE; // 80 px of asphalt between building plots
 export function roadCentreX(i) { return i * PITCH + ROAD_W / 2; }
@@ -19,19 +19,29 @@ export function generateCity(random) {
     for (let by = 0; by < ROWS; by += 1) {
       const x0 = bx * PITCH + ROAD_W, y0 = by * PITCH + ROAD_W, size = BLOCK * TILE;
       const docks = by >= ROWS - 2 && bx < 3; // Old Port: low warehouses instead of towers
-      const count = docks ? 2 : random.int(2, 4);
+      const hills = by === 0; // The Hills: houses with pitched roofs, not towers
+      const bigSingle = !docks && !hills && random.chance(0.16); // one landmark block-filler
+      const count = docks ? 2 : bigSingle ? 1 : random.int(2, 4);
       for (let k = 0; k < count; k += 1) {
-        const w = random.range(56, 100), h = random.range(56, 100);
+        const w = bigSingle ? random.range(150, 200) : random.range(56, 100), h = bigSingle ? random.range(150, 200) : random.range(56, 100);
         const x = x0 + 8 + (k % 2) * (size / 2) + random.range(0, 14);
         const y = y0 + 8 + Math.floor(k / 2) * (size / 2) + random.range(0, 14);
-        buildings.push({ x, y, w: Math.min(w, size - (x - x0) - 8), h: Math.min(h, size - (y - y0) - 8), color: random.pick(PALETTE.roof), floors: docks ? 1 : random.int(2, 9), seed: random.next() });
+        const floors = docks ? 1 : hills ? 1 : random.int(2, 9);
+        const kind = docks ? 'warehouse' : hills ? 'house' : floors >= 7 ? 'tower' : random.chance(0.34) ? 'shop' : 'block';
+        buildings.push({
+          x, y, w: Math.min(w, size - (x - x0) - 8), h: Math.min(h, size - (y - y0) - 8),
+          color: random.pick(PALETTE.roof), floors, seed: random.next(), kind,
+          trim: random.pick(PALETTE.trim), sign: kind === 'shop' ? random.pick(SHOP_SIGNS) : null,
+          roofProp: kind === 'tower' || kind === 'block' ? random.pick(['tank', 'ac', 'antenna', 'none', 'none']) : 'none',
+        });
       }
       for (let k = 0; k < 3; k += 1) if (random.chance(0.7)) palms.push({ x: x0 + random.range(4, size), y: y0 + random.range(4, size), s: random.range(0.8, 1.3) });
       lamps.push({ x: bx * PITCH + 6, y: by * PITCH + 6 });
     }
   }
   for (let y = 60; y < WORLD_H; y += 130) palms.push({ x: BEACH_X + random.range(10, 90), y, s: random.range(0.9, 1.4) });
-  for (let i = 0; i < 26; i += 1) props.push({ x: random.range(90, WORLD_W - 760), y: random.range(90, WORLD_H - 90), kind: random.pick(['crate', 'bench', 'hydrant', 'bin']) });
+  for (let y = 110; y < WORLD_H; y += 260) props.push({ x: BEACH_X + random.range(24, 130), y, kind: 'umbrella', color: random.pick(PALETTE.trim) });
+  for (let i = 0; i < 34; i += 1) props.push({ x: random.range(90, WORLD_W - 760), y: random.range(90, WORLD_H - 90), kind: random.pick(['crate', 'bench', 'hydrant', 'bin', 'dumpster', 'planter']) });
   const hospital = { x: roadCentreX(4) + 60, y: roadCentreY(4) - 30 };
   const garage = { x: roadCentreX(2) + 70, y: roadCentreY(5) + 40 };
   const marinaOffice = { x: BEACH_X - 150, y: roadCentreY(6) };

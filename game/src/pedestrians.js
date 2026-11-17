@@ -5,11 +5,16 @@ import { clamp, lerpAngle } from './random.js';
 import { ROAD_W, collideBuildings } from './city.js';
 
 const SHIRTS = ['#d96b4a', '#4a90d9', '#e8e3d5', '#69a85b', '#b04a7a', '#e0b13c', '#5a6b7d'];
+const SKINS = ['#e8b88a', '#c98d5f', '#8a5a34', '#f0c8a0', '#6e4525'];
+const PANTS = ['#33404f', '#5a4632', '#3f4a3a', '#6e2f35', '#2f4a6e', '#777d84'];
 let nextPedId = 1;
 export function makePed(x, y, random, opts) {
+  // walkers stroll, joggers hurry in bright kit, elders amble: the crowd reads as people, not clones
+  const variant = random.chance(0.18) ? 'jogger' : random.chance(0.14) ? 'elder' : 'walker';
   return Object.assign({
     id: nextPedId++, x, y, angle: random.range(0, Math.PI * 2), speed: 0, health: 100, dead: false,
     state: 'walk', panic: 0, cop: false, enemy: false, driverOf: null, shirt: random.pick(SHIRTS),
+    skin: random.pick(SKINS), pants: random.pick(PANTS), variant, hat: random.chance(0.3),
     waypoint: null, shootCd: 0, hitFlash: 0,
   }, opts || {});
 }
@@ -49,7 +54,7 @@ export function stepPedestrian(ped, dt, world) {
       ped.waypoint = { x: ped.x + world.random.range(-190, 190), y: ped.y + world.random.range(-190, 190) };
     }
     ped.angle = lerpAngle(ped.angle, Math.atan2(ped.waypoint.y - ped.y, ped.waypoint.x - ped.x), clamp(dt * 3, 0, 1));
-    targetSpeed = 62;
+    targetSpeed = ped.variant === 'jogger' ? 108 : ped.variant === 'elder' ? 42 : 62;
   }
   ped.speed += clamp(targetSpeed - ped.speed, -300 * dt, 300 * dt);
   ped.x += Math.cos(ped.angle) * ped.speed * dt;

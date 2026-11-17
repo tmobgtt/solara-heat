@@ -3,7 +3,7 @@
 import { PLAYER, WORLD_H, WORLD_W } from './config.js';
 import { clamp } from './random.js';
 import { generateCity, collideBuildings, roadCentreX, roadCentreY } from './city.js';
-import { makeCar, spawnParkedCars, stepCarPhysics, stepTrafficCar } from './vehicles.js';
+import { makeCar, spawnParkedCars, stepCarPhysics, stepTrafficCar, isHeavy } from './vehicles.js';
 import { makePed, spawnPedestrians, stepPedestrian, scarePedsNear, ejectDriver } from './pedestrians.js';
 import { createPoliceState, commitCrime, stepPolice, clearHeat, starsForHeat } from './police.js';
 import { createCombatState, stepCombat, damagePlayerImpl } from './combat.js';
@@ -27,8 +27,8 @@ export function createWorld(random, audio) {
   world.autosave = () => { try { saveGame(world); } catch { /* storage off */ } };
   world.missions = createMissions(world);
 
-  const trafficTypes = ['compact', 'sedan', 'taxi', 'truck', 'compact', 'sedan'];
-  for (let i = 0; i < 14; i += 1) {
+  const trafficTypes = ['compact', 'sedan', 'taxi', 'truck', 'compact', 'sedan', 'hauler', 'compact'];
+  for (let i = 0; i < 16; i += 1) {
     const vertical = random.chance(0.5);
     const gx = random.int(0, 8), gy = random.int(0, 7);
     const x = vertical ? roadCentreX(gx) + (random.chance(0.5) ? -20 : 20) : random.range(60, WORLD_W - 800);
@@ -37,8 +37,8 @@ export function createWorld(random, audio) {
     car.ai.dirx = Math.cos(car.angle); car.ai.diry = Math.sin(car.angle);
     world.cars.push(car);
   }
-  world.cars.push(...spawnParkedCars(city, random, 22));
-  world.peds.push(...spawnPedestrians(city, random, 30));
+  world.cars.push(...spawnParkedCars(city, random, 24));
+  world.peds.push(...spawnPedestrians(city, random, 38));
 
   function nearestCar(x, y, maxD) {
     let best = null, bd = maxD;
@@ -62,11 +62,14 @@ export function createWorld(random, audio) {
     const hadDriver = !!car.driver;
     if (hadDriver) { ejectDriver(world, car); world.commitCrime('steal'); }
     else if (world.peds.some((p) => !p.dead && Math.hypot(p.x - car.x, p.y - car.y) < 160)) world.commitCrime('steal');
+    if (isHeavy(car)) world.commitCrime('steal'); // grand theft hauler: twice the noise, twice the heat
     car.parked = false; car.traffic = false; car.occupied = true;
     player.car = car;
     world.stats.carsStolen += 1;
     if (world.audio) world.audio.enterCar();
-    world.message = 'Driving the ' + car.type + '. WASD to drive, E to get out.';
+    world.message = car.type === 'hauler'
+      ? 'Driving the hauler. It is slow, wide and wallows in corners — mind the traffic.'
+      : 'Driving the ' + car.type + '. WASD to drive, E to get out.';
   }
 
   function stepOnFoot(dt, input, aimWorld) {
@@ -90,7 +93,7 @@ export function createWorld(random, audio) {
     const before = { x: car.x, y: car.y };
     stepCarPhysics(car, dt, throttle, steer, input.handbrake);
     car.x = clamp(car.x, 24, WORLD_W - 24); car.y = clamp(car.y, 24, WORLD_H - 24);
-    if (collideBuildings(city, car, 17)) { car.x = before.x; car.y = before.y; if (Math.abs(car.speed) > 120) { car.health -= 6; world.damagePlayer(2); } car.speed *= -0.2; }
+    if (collideBuildings(city, car, car.type === 'hauler' ? 23 : 17)) { car.x = before.x; car.y = before.y; if (Math.abs(car.speed) > 120) { car.health -= 6; world.damagePlayer(2); } car.speed *= -0.2; }
     player.x = car.x; player.y = car.y; player.angle = car.angle;
     world.stats.distance += Math.abs(car.speed) * dt;
     if (car.drifting && world.skids.length < 500) world.skids.push({ x: car.x, y: car.y, a: car.angle, t: 14 });

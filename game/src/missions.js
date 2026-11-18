@@ -1,4 +1,4 @@
-// The story: six jobs for fixer Vera Calloway that take Marco Reyes across Solara City, plus
+// The story: eight jobs for fixer Vera Calloway that take Marco Reyes across Solara City, plus
 // repeatable taxi, courier and checkpoint-race side work between story beats — and, new in v2,
 // chop-shop deliveries that pay a bonus for an undamaged car and a six-checkpoint street series.
 import { REWARDS } from './config.js';
@@ -26,9 +26,17 @@ export function missionDefs(world) {
       { kind: 'kill', count: 4, x: city.stash.x, y: city.stash.y, text: 'Clear out Dario\'s crew at the docks.', who: CHARACTERS.rival, line: 'Venn sends his regards, Reyes. You should have stayed a driver.' } ] },
     { id: 'm5', title: 'Marina Heist', reward: REWARDS.m5, steps: [
       { kind: 'goto', x: beach.x, y: beach.y, r: 44, text: 'Grab the cash case at the marina office.', who: CHARACTERS.vera, line: 'The marina office holds tonight\'s take. Grab the case, then lose the heat.' },
-      { kind: 'lose', text: 'Lose the 4-star heat!', who: CHARACTERS.vera, line: 'Every cop in Solara is awake. Break their line of sight and stay gone.' } ] },
+      { kind: 'lose', heat: 120, text: 'Lose the 4-star heat!', who: CHARACTERS.vera, line: 'Every cop in Solara is awake. Break their line of sight and stay gone.' } ] },
     { id: 'm6', title: 'Last Ride', reward: REWARDS.m6, steps: [
       { kind: 'race', text: 'Beat Dario through every checkpoint across the city.', who: CHARACTERS.rival, line: 'One race, Reyes. My line against your nerve. Loser leaves Solara.' } ] },
+    { id: 'm7', title: 'Payback at the Port', reward: REWARDS.m7, steps: [
+      { kind: 'goto', x: city.stash.x, y: city.stash.y, r: 52, text: 'Meet Vera\'s contact at the Old Port docks.', who: CHARACTERS.vera, line: 'Dario lost the race but not his temper. His crew is back at my docks. End it this time.' },
+      { kind: 'kill', count: 5, x: city.stash.x, y: city.stash.y, text: 'Clear out Dario\'s crew at the docks, for good.', who: CHARACTERS.rival, line: 'You took my city, Reyes. My boys take it back tonight.' },
+      { kind: 'goto', x: city.garage.x, y: city.garage.y, r: 52, text: 'Report back to Vera\'s garage.', who: CHARACTERS.vera, line: 'The docks are quiet and the port is ours. Come home, Marco.' } ] },
+    { id: 'm8', title: 'One Last Sunset', reward: REWARDS.m8, steps: [
+      { kind: 'steal', x: hills.x - 200, y: hills.y + 120, r: 60, carType: 'sports', color: '#e5534b', text: 'Steal the marked red sports car in The Hills.', who: CHARACTERS.vera, line: 'One last job, Marco. A red sports car in The Hills, a buyer at the marina, and then we are done.' },
+      { kind: 'goto', x: beach.x, y: beach.y, r: 50, car: 'marked', text: 'Deliver the sports car to the buyer at the Marina.', who: CHARACTERS.vera, line: 'The buyer waits at the marina office. He pays cash and asks nothing.' },
+      { kind: 'lose', heat: 150, text: 'Lose the 5-star heat! The helicopter is up!', who: CHARACTERS.vera, line: 'That car was a police sting, Marco! Five stars and a helicopter — run, and do not stop running!' } ] },
   ];
 }
 export function createMissions(world) {
@@ -65,7 +73,7 @@ export function createMissions(world) {
       const total = step.raceTime || 150;
       state.race = { pts, idx: 0, rivalT: total, rivalTotal: total, rivalProgress: 0 };
     }
-    if (active.def.id === 'm5' && active.step === 1) world.setHeat(120); // the heist trips a full 4-star response
+    if (step.heat) world.setHeat(step.heat); // a step can trip its own response: the heist's 4 stars, the finale's 5
   }
   function finish(active) {
     const reward = typeof active.def.rewardFor === 'function' ? active.def.rewardFor(world, state) : active.def.reward;

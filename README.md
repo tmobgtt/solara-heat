@@ -33,13 +33,17 @@ sea along its east edge.
   dressed differently — stroll, panic and run from trouble.
 - **The law**: a 0–5 star wanted system fed by stealing, collisions, running
   people down and shooting. Police cars chase, foot officers arrive at high
-  heat, heat decays out of sight, and you can be **busted** or **wasted** —
-  either way you wake up at Solara General with a fine.
+  heat, and at four stars a **police helicopter** joins the hunt and holds
+  you in its spotlight, so the heat cannot cool while it watches; heat
+  decays out of sight, and you can be **busted** or **wasted** — either way
+  you wake up at Solara General with a fine.
 - **Combat**: fists and a mouse-aimed pistol (pick it up at the Old Port
   stash), with bullets, muzzle flash and rival crews who shoot back.
-- **A six-mission story**: *First Run*, *Hot Wheels*, *Meter Running*,
-  *Dockside Business*, *Marina Heist* and *Last Ride*, with dialogue banners,
-  objective markers and payouts, ending in a **City Conquered** screen — plus
+- **An eight-mission story**: *First Run*, *Hot Wheels*, *Meter Running*,
+  *Dockside Business*, *Marina Heist*, *Last Ride*, *Payback at the Port*
+  and *One Last Sunset* — the last a sting delivery that trips a five-star
+  helicopter finale — with dialogue banners, objective markers and payouts,
+  ending in a **City Conquered** screen — plus
   five repeatable side jobs in free roam: taxi fares, courier runs,
   checkpoint races, **chop-shop deliveries** (bring the marked car back
   clean for a damage bonus) and the six-checkpoint **street series**.

@@ -2,6 +2,7 @@
 // simulation, and the ?test=1 self-test that drives the real sim through a scripted sequence.
 // v2 staging: a dusk rush-hour downtown behind the title, a daylight drive, a four-star chase
 // after dark (lit windows, lamp glow, headlights, siren wash), and the Marina Heist escape.
+// v3 staging: the chase is now a five-star night chase with the police helicopter in frame.
 import { STEP } from './config.js';
 import { roadCentreX, roadCentreY } from './city.js';
 import { scriptedInput } from './input.js';
@@ -41,11 +42,15 @@ export function stageShot(name, world) {
     world.clockMinutes = 21.6 * 60; // night: the city lights do the talking
     world.missions.beginStoryAt(0);
     putPlayerInSportsCar(world, roadCentreX(1), roadCentreY(3), 0);
-    world.setHeat(140); // four stars
+    world.setHeat(150); // five stars: the helicopter joins the hunt
     // two units already on his tail, close enough to stay in frame while he outruns them
     world.cars.push(makeCar('police', world.player.x - 260, roadCentreY(3) - 26, 0, world.random, { traffic: false }));
     world.cars.push(makeCar('police', world.player.x - 370, roadCentreY(3) + 30, 0, world.random, { traffic: false }));
-    runSteps(world, 150, scriptedInput({ moveY: -1 }));
+    runSteps(world, 100, scriptedInput({ moveY: -1 })); // the helicopter launches and gives chase
+    // the sports car outruns the helicopter's 305 cruise, so for the portrait the aircraft is
+    // repositioned ahead of Marco late: it cuts him off, and the last 50 steps hold it in frame
+    if (world.police.heli) { world.police.heli.x = world.player.x + 250; world.police.heli.y = world.player.y - 150; }
+    runSteps(world, 50, scriptedInput({ moveY: -1 }));
     return { screen: SCREEN_PLAY };
   }
   if (name === 'mission') {
@@ -156,6 +161,43 @@ export function runSelfTest(world) {
       guard += 1;
     }
     check('street series completes all checkpoints', world.missions.state.sideCounts.series === 1);
+    // v3 story: eight jobs on the board
+    check('story: eight jobs are defined', world.missions.defs.length === 8);
+    // v3 air support: five stars launch the helicopter, and it shadows Marco
+    runSteps(world, 1, scriptedInput({ interact: true })); // step out of any car
+    world.setHeat(170);
+    runSteps(world, 45, scriptedInput());
+    check('helicopter: five stars launch air support that closes in', !!world.police.heli && world.police.stars === 5 && Math.hypot(world.police.heli.x - world.player.x, world.police.heli.y - world.player.y) < 700);
+    world.setHeat(0);
+    runSteps(world, 2, scriptedInput());
+    check('helicopter: it stands down when the heat is gone', !world.police.heli);
+    // v3 mission 7 end to end: meet at the docks, clear the crew, report back
+    if (world.player.car) runSteps(world, 1, scriptedInput({ interact: true })); // on foot: teleports only hold outside a car
+    world.missions.beginStoryAt(6);
+    check('mission 7 starts at the garage', !!world.missions.state.active && world.missions.state.active.def.id === 'm7');
+    const m7Cash = world.player.cash;
+    world.player.x = world.city.stash.x; world.player.y = world.city.stash.y;
+    runSteps(world, 2, scriptedInput());
+    const foes = world.peds.filter((p) => p.enemy && !p.dead);
+    for (const foe of foes) { foe.dead = true; world.missions.onPedKilled(foe); }
+    runSteps(world, 2, scriptedInput());
+    world.player.x = world.city.garage.x; world.player.y = world.city.garage.y;
+    runSteps(world, 2, scriptedInput());
+    check('mission 7 completed by driving the objectives', world.missions.state.storyIndex === 7 && world.player.cash === m7Cash + 1800);
+    // v3 mission 8 end to end: steal the sting car, deliver it, then lose the 5-star heat
+    check('mission 8 starts after mission 7', !!world.missions.state.active && world.missions.state.active.def.id === 'm8');
+    const stingCar = world.missions.state.markedCar;
+    const m8Cash = world.player.cash;
+    world.player.x = stingCar.x - 30; world.player.y = stingCar.y;
+    runSteps(world, 1, scriptedInput({ interact: true }));
+    const inStingCar = world.player.car === stingCar;
+    stingCar.x = world.city.marinaOffice.x; stingCar.y = world.city.marinaOffice.y;
+    world.player.x = stingCar.x; world.player.y = stingCar.y;
+    runSteps(world, 2, scriptedInput());
+    const finaleHeat = world.police.stars === 5 && !!world.missions.state.active && world.missions.state.active.step === 2;
+    world.setHeat(0);
+    runSteps(world, 2, scriptedInput());
+    check('mission 8: the sting delivery trips a 5-star finale, then losing it completes the story', inStingCar && finaleHeat && world.missions.state.complete && world.player.cash === m8Cash + 2500);
   } catch (err) {
     lines.push('FAIL exception: ' + (err && err.message));
   }

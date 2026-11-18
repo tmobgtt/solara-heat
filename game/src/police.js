@@ -1,5 +1,7 @@
 // The law: a heat score becomes 0-5 stars, police cars and (at high heat) foot officers spawn and
-// give chase, heat decays while unseen, and standing still next to a cop at low speed gets Marco busted.
+// give chase, at four stars a helicopter joins and holds Marco in its spotlight so the heat cannot
+// cool while it watches, heat decays while unseen, and standing still next to a cop at low speed
+// gets Marco busted.
 import { CRIMES, WANTED } from './config.js';
 import { clamp, lerpAngle } from './random.js';
 import { makeCar, moveCar } from './vehicles.js';
@@ -12,7 +14,7 @@ export function starsForHeat(heat) {
   return stars;
 }
 export function createPoliceState() {
-  return { heat: 0, stars: 0, seenTimer: 0, bustTimer: 0, spawnTimer: 0 };
+  return { heat: 0, stars: 0, seenTimer: 0, bustTimer: 0, spawnTimer: 0, heli: null };
 }
 export function commitCrime(world, kind) {
   const add = CRIMES[kind] || 0;
@@ -24,10 +26,32 @@ export function commitCrime(world, kind) {
 export function stepPolice(world, dt) {
   const pol = world.police, player = world.player;
   pol.stars = starsForHeat(pol.heat);
+  // air support: at four stars and up the helicopter joins the hunt and shadows Marco from
+  // above; it cruises at 305, slower than a sports car, so a fast driver can still break away
+  if (pol.stars >= 4) {
+    if (!pol.heli) pol.heli = { x: player.x + 520, y: player.y - 520, angle: Math.PI * 0.75, rotor: 0 };
+    const h = pol.heli;
+    h.rotor += dt * 31;
+    const hx = player.x - Math.cos(world.time * 0.35) * 120, hy = player.y - Math.sin(world.time * 0.35) * 120;
+    const hd = Math.hypot(hx - h.x, hy - h.y);
+    if (hd > 4) {
+      const want = Math.atan2(hy - h.y, hx - h.x);
+      h.angle = lerpAngle(h.angle, want, clamp(dt * 2.2, 0, 1));
+      const step = Math.min(305 * dt, hd);
+      h.x += Math.cos(h.angle) * step; h.y += Math.sin(h.angle) * step;
+    }
+  } else if (pol.heli) {
+    // the hunt is off: the helicopter peels away and is gone once it is far off
+    const h = pol.heli;
+    h.rotor += dt * 31;
+    h.x += Math.cos(h.angle) * 380 * dt; h.y += Math.sin(h.angle) * 380 * dt;
+    if (pol.stars === 0 || Math.hypot(h.x - player.x, h.y - player.y) > 1100) pol.heli = null;
+  }
   // can any cop or camera-witness see the player?
   let seen = false;
   for (const car of world.cars) if (car.police && !car.dead && Math.hypot(car.x - player.x, car.y - player.y) < WANTED.sightRange) seen = true;
   for (const ped of world.peds) if (ped.cop && !ped.dead && Math.hypot(ped.x - player.x, ped.y - player.y) < WANTED.sightRange) seen = true;
+  if (pol.heli && pol.stars >= 4 && Math.hypot(pol.heli.x - player.x, pol.heli.y - player.y) < 560) seen = true; // the spotlight holds him: no cooling off under it
   if (pol.stars > 0 && !seen) { pol.heat = Math.max(0, pol.heat - WANTED.decayPerSec * dt); pol.seenTimer = 0; }
   else if (seen) pol.seenTimer += dt;
   pol.spawnTimer -= dt;
@@ -62,4 +86,4 @@ export function stepPolice(world, dt) {
   pol.bustTimer = adjacent ? pol.bustTimer + dt : 0;
   if (pol.bustTimer > 1.6) world.events.busted = true;
 }
-export function clearHeat(world) { world.police.heat = 0; world.police.stars = 0; world.police.bustTimer = 0; }
+export function clearHeat(world) { world.police.heat = 0; world.police.stars = 0; world.police.bustTimer = 0; world.police.heli = null; }

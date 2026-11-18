@@ -13,7 +13,7 @@ export const BEACH_X = COLS * PITCH + 60;
 export const PLAYER = { radius: 11, walk: 150, sprint: 235, health: 100, armour: 0 };
 export const WANTED = { thresholds: [0, 10, 28, 55, 95, 150], decayPerSec: 2.4, sightRange: 340 };
 export const CRIMES = { steal: 12, hitCar: 6, hitPed: 22, killPed: 45, shoot: 8, copCar: 18 };
-export const REWARDS = { m1: 300, m2: 450, m3: 350, m4: 600, m5: 1000, m6: 1500, taxi: 75, courier: 110, race: 200, chop: 220, chopBonusMax: 180, series: 320 };
+export const REWARDS = { m1: 300, m2: 450, m3: 350, m4: 600, m5: 1000, m6: 1500, m7: 1800, m8: 2500, taxi: 75, courier: 110, race: 200, chop: 220, chopBonusMax: 180, series: 320 };
 export const FINE_PER_STAR = 120;
 export const PALETTE = {
   road: '#3a3f46', roadLine: '#d8c25a', sidewalk: '#b8ab90', grass: '#79a85b', sand: '#ecd28a',

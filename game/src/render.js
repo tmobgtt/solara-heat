@@ -172,6 +172,34 @@ export function createRenderer(canvas) {
   }
   let worldRef = null;
   function world_markedCar(w) { return w && w.missions ? w.missions.state.markedCar : null; }
+  function drawHeli(world, camX, camY) {
+    const h = world.police.heli;
+    if (!h) return;
+    const x = h.x - camX, y = h.y - camY;
+    if (x < -220 || x > view.w + 220 || y < -220 || y > view.h + 220) return;
+    // the spotlight pool it holds on the street, then its shadow, then the aircraft itself,
+    // lit and blinking, drawn over the night tint so the hunt reads at a glance
+    const pool = ctx.createRadialGradient(x, y, 8, x, y, 128);
+    pool.addColorStop(0, 'rgba(255,244,190,' + (0.1 + 0.16 * darkF).toFixed(3) + ')'); pool.addColorStop(1, 'rgba(255,244,190,0)');
+    ctx.fillStyle = pool; ctx.beginPath(); ctx.arc(x, y, 128, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.ellipse(x + 30, y + 38, 27, 10, h.angle, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.translate(x, y); ctx.rotate(h.angle);
+    ctx.fillStyle = 'rgba(190,200,214,0.28)';
+    ctx.beginPath(); ctx.ellipse(0, 0, 62, 7, h.rotor % Math.PI, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#232a33'; ctx.fillRect(-38, -3.4, 34, 6.8);
+    ctx.fillRect(-46, -7, 5, 14);
+    ctx.fillStyle = '#2e3947';
+    ctx.beginPath(); ctx.ellipse(2, 0, 25, 10.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(170,215,245,0.9)'; ctx.beginPath(); ctx.ellipse(15, 0, 8.5, 6.4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f2c94c'; ctx.fillRect(-8, -10.5, 15, 3.4);
+    ctx.strokeStyle = 'rgba(20,24,30,0.85)'; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.moveTo(-12, 12); ctx.lineTo(12, 12); ctx.moveTo(-12, -12); ctx.lineTo(12, -12); ctx.stroke();
+    const blink = Math.floor(performance.now() / 420) % 2 === 0;
+    ctx.fillStyle = blink ? '#ff4040' : 'rgba(255,64,64,0.25)'; ctx.beginPath(); ctx.arc(-44, 0, 2.8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = blink ? 'rgba(64,255,140,0.25)' : '#40ff8c'; ctx.beginPath(); ctx.arc(2, -11.5, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
   function drawPed(ped) {
     ctx.save(); ctx.translate(ped.x, ped.y);
     if (ped.dead) { ctx.fillStyle = ped.shirt; ctx.beginPath(); ctx.ellipse(0, 0, 13, 6, ped.angle, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
@@ -230,11 +258,12 @@ export function createRenderer(canvas) {
     ctx.restore();
     // day-cycle tint
     if (darkness > 0) { ctx.fillStyle = `rgba(16,22,54,${darkness})`; ctx.fillRect(0, 0, view.w, view.h); }
+    drawHeli(world, camX, camY); // over the tint: the helicopter's lights and spotlight stay lit
     if (screen === SCREEN_PLAY || screen === SCREEN_PAUSED) drawHud(ctx, world, view.w, view.h);
     if (screen === SCREEN_TITLE) {
       panel('SOLARA HEAT', [
         'Marco Reyes, wheelman for fixer Vera Calloway, in sun-soaked Solara City.',
-        'Steal cars, run Vera\'s six jobs, dodge or fight the law, get rich.',
+        'Steal cars, run Vera\'s eight jobs, dodge or fight the law, get rich.',
         '',
         'WASD / arrows — move and drive      E — enter / exit / steal a car',
         'Mouse — aim · Click or J — shoot / punch      Shift — sprint',
@@ -243,7 +272,7 @@ export function createRenderer(canvas) {
     } else if (screen === SCREEN_PAUSED) panel('PAUSED', ['Solara City waits for no one. Well — just this once.'], 'Press Esc to resume');
     else if (screen === SCREEN_BUSTED) panel('BUSTED', ['The Solara PD got their man. Bail and fines paid from your cash.'], 'Press Enter to respawn at the hospital');
     else if (screen === SCREEN_WASTED) panel('WASTED', ['Marco wakes up at Solara General with a bill and a headache.'], 'Press Enter to respawn at the hospital');
-    else if (screen === SCREEN_COMPLETE) panel('CITY CONQUERED', ['All six of Vera\'s jobs are done. Dario is gone, the docks are yours,', 'and Solara City belongs to Marco Reyes. Free roam continues —', 'side jobs at Vera\'s garage keys T / C / R still pay.'], 'Press Enter to keep roaming');
+    else if (screen === SCREEN_COMPLETE) panel('CITY CONQUERED', ['All eight of Vera\'s jobs are done. Dario is gone, the docks are yours,', 'and Solara City belongs to Marco Reyes. Free roam continues —', 'side jobs at Vera\'s garage keys T / C / R / H / G still pay.'], 'Press Enter to keep roaming');
     return { camX, camY };
   }
   return { draw, view };
